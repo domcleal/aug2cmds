@@ -1,0 +1,20 @@
+* Start aug2cmds with:
+  * -r root directory
+  * -o puppet|augsrun|augtool
+  * -l Sudoers.lns
+  * -y "yes", take best guesses
+  * /path/to/file (/etc/sudoers or etc/sudoers)
+  * [ aug path inside file ]
+* First parse PATH with lens if given
+* If no augpath given, give the user a `print` type layout and make them select
+* For augpath,
+  * if -y then use . as the path expression or first child if no .
+    * need to consider for the top mode whether it's a seq etc
+  * else prompt the user for one or more options to be used in combination
+  * if there's no . value and there are children, no need to save the node
+  * save the node data
+  * recurse into augpath
+* Output formatting
+  * aug_srun/augtool
+  * Puppet
+  * API calls
