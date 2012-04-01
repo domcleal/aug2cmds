@@ -1,6 +1,6 @@
 # aug2cmds: a utility to generate Augeas commands from a file
 
-** This utility's a work in progress, help appreciated **
+**This utility's a work in progress, help appreciated**
 
 Augeas has a set of commands and API calls that create and modify nodes in the
 tree, but they can be tedious to create.
@@ -17,6 +17,7 @@ Ensure both Augeas and python-augeas bindings are installed and working as
 normal.
 
 For development, I suggest you also use:
+
 * nose, for running tests
 * pylint, to keep the score over 8 or so
 
