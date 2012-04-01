@@ -107,5 +107,17 @@ class TestPathNode(unittest.TestCase):
         self.assertTrue(isinstance(tn, aug2cmds.Node))
         self.assertFalse(isinstance(tn, aug2cmds.PathNode))
 
+    def test_children(self):
+        """Check children, should call topnode"""
+        n = aug2cmds.PathNode("/etc/hosts", root=self.root)
+        self.assertTrue(n)
+        self.assertTrue(next(n.children("../hosts")) is n)
+
+    def test_setpath(self):
+        """Check setpath returns just the path"""
+        n = aug2cmds.PathNode("/etc/hosts", root=self.root)
+        self.assertTrue(n)
+        self.assertEqual(n.setpath(), "/files/etc/hosts")
+
 if __name__ == '__main__':
     unittest.main()

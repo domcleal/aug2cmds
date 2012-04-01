@@ -8,12 +8,15 @@ from augeas import Augeas
 import os
 
 class Node:
-    """Represents a node in the tree that we will be creating commands for."""
-    aug = None
+    """Represents a node in the tree that we will be creating commands for.
 
-    def __init__(self, aug, path):
+    :param uniqpaths: list of paths relative to this node that make it
+    unique, e.g. ["."], ["ipaddr", "canonical"]"""
+    def __init__(self, aug, parent, path, uniqpaths=["."]):
         self.aug = aug
+        self.parent = parent
         self.path = path
+        self.uniqpaths = uniqpaths
 
     @classmethod
     def basename(cls, path):
@@ -50,23 +53,25 @@ class Node:
                     else:
                         return path[:c]
 
-    def setpath(self, uniqpaths):
+    def setpath(self):
         """Generate a path for use in `set` commands to represent this node.
 
         Path is based on a unique value that will be contained inside an XPath
-        type expression.
-
-        :param uniqpaths: list of paths relative to this node that make it
-        unique, e.g. ["."], ["ipaddr", "canonical"]"""
+        type expression."""
 
         # FIXME: quoting
         # FIXME: how to handle seqs?
-        return "%s/%s[%s]" % (self.dirname(self.path),
-                              self.basename(self.path),
-                              " and ".join(
-                                ["%s='%s'" % (subpath, self.aug.get("%s/%s" %
-                                                (self.path, subpath)))
-                                 for subpath in uniqpaths]))
+        return "%s/%s[%s]" % \
+            (self.parent.setpath(),
+             self.basename(self.path),
+             " and ".join(["%s='%s'" % \
+                             (subpath, self.aug.get("%s/%s" %
+                                         (self.path, subpath)))
+                           for subpath in self.uniqpaths]))
+
+    def children(self):
+        for cpath in self.aug.match("%s/*" % self.path):
+            yield Node(self.aug, self, cpath)
 
 class PathNode(Node):
     """Top level Augeas node representing the file itself."""
@@ -91,7 +96,7 @@ class PathNode(Node):
             flags = Augeas.NO_MODL_AUTOLOAD
 
         aug = Augeas(root=root, flags=flags)
-        Node.__init__(self, aug, "/files%s" % path)
+        Node.__init__(self, aug, None, "/files%s" % path)
 
         if lens:
             self.aug.add_transform(lens, path)
@@ -105,6 +110,12 @@ class PathNode(Node):
         """Cleanly close Augeas."""
         if self.aug:
             self.aug.close()
+
+    def setpath(self):
+        return self.path
+
+    def children(self, augpath):
+        yield self.topnode(augpath)
 
     def topnode(self, augpath=None):
         """Gets the top `Node` from augpath relative to this file."""
@@ -126,4 +137,4 @@ class PathNode(Node):
         if toppath == self.path:
             return self
 
-        return Node(self.aug, toppath)
+        return Node(self.aug, self, toppath, [augpath])

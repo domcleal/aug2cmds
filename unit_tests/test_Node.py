@@ -17,26 +17,34 @@ class TestNode(unittest.TestCase):
         self.aug.add_transform("Nsswitch.lns", "/etc/nsswitch.conf")
         self.aug.load()
 
+        class FakeParent:
+            def setpath(self):
+                return "/files/etc/nsswitch.conf"
+        self.parent = FakeParent()
+
     def tearDown(self):
         shutil.rmtree(self.tmp)
         self.aug.close()
 
     def test_setpath_self(self):
         """Test setpath generates path for '.' (itself)"""
-        n = aug2cmds.Node(self.aug, "/files/etc/nsswitch.conf/database[1]")
-        self.assertEqual(n.setpath(["."]),
+        n = aug2cmds.Node(self.aug, self.parent, uniqpaths=["."],
+                          path="/files/etc/nsswitch.conf/database[1]")
+        self.assertEqual(n.setpath(),
                          "/files/etc/nsswitch.conf/database[.='passwd']")
 
     def test_setpath_subnode(self):
         """Test setpath generates path for a subnode"""
-        n = aug2cmds.Node(self.aug, "/files/etc/nsswitch.conf/database[1]")
-        self.assertEqual(n.setpath(["service"]),
+        n = aug2cmds.Node(self.aug, self.parent, uniqpaths=["service"],
+                          path="/files/etc/nsswitch.conf/database[1]")
+        self.assertEqual(n.setpath(),
                          "/files/etc/nsswitch.conf/database[service='files']")
 
     def test_setpath_and(self):
         """Test setpath generates path for multiple subpaths"""
-        n = aug2cmds.Node(self.aug, "/files/etc/nsswitch.conf/database[1]")
-        self.assertEqual(n.setpath([".", "service"]),
+        n = aug2cmds.Node(self.aug, self.parent, uniqpaths=[".", "service"],
+                          path="/files/etc/nsswitch.conf/database[1]")
+        self.assertEqual(n.setpath(),
           "/files/etc/nsswitch.conf/database[.='passwd' and service='files']")
 
     def test_basename(self):
@@ -54,6 +62,31 @@ class TestNode(unittest.TestCase):
         self.assertEqual(aug2cmds.Node.dirname("/files/test[foo]"), "/files")
         self.assertEqual(aug2cmds.Node.dirname(
                            "/files/test[foo/bar]"), "/files")
+
+    def test_children_none(self):
+        """Test when there are no children"""
+        n = aug2cmds.Node(self.aug, self.parent,
+                          "/files/etc/nsswitch.conf/#comment[1]")
+        self.assertRaises(StopIteration, next, n.children())
+
+    def test_children(self):
+        """Test new Node objects are created for children"""
+        n = aug2cmds.Node(self.aug, self.parent,
+                          "/files/etc/nsswitch.conf/database[15]")
+        c = n.children()
+        sn = c.next()
+        self.assertEqual(sn.path,
+          "/files/etc/nsswitch.conf/database[15]/service[1]")
+        self.assertEqual(sn.setpath(),
+          "/files/etc/nsswitch.conf/database[.='aliases']/service[.='files']")
+
+        sn = c.next()
+        self.assertEqual(sn.path,
+          "/files/etc/nsswitch.conf/database[15]/service[2]")
+        self.assertEqual(sn.setpath(),
+          "/files/etc/nsswitch.conf/database[.='aliases']/service[.='nisplus']")
+
+        self.assertRaises(StopIteration, next, c)
 
 if __name__ == '__main__':
     unittest.main()
