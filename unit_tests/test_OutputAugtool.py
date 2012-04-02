@@ -30,13 +30,8 @@ class TestNode(unittest.TestCase):
         self.root = "%s/root" % self.tmp
         shutil.copytree("%s/fakeroot" % os.path.dirname(__file__), self.root)
 
-        self.aug = Augeas(root=self.root, flags=Augeas.NO_MODL_AUTOLOAD)
-        self.aug.add_transform("Nsswitch.lns", "/etc/nsswitch.conf")
-        self.aug.load()
-
     def tearDown(self):
         shutil.rmtree(self.tmp)
-        self.aug.close()
 
     def test_visitnode_fake(self):
         """Test visitnode against two fake nodes"""
@@ -58,7 +53,7 @@ class TestNode(unittest.TestCase):
 
     def test_pathnode_aliases(self):
         """Test with real PathNode against nsswitch.conf aliases"""
-        pn = aug2cmds.PathNode("/etc/nsswitch.conf")
+        pn = aug2cmds.PathNode("/etc/nsswitch.conf", root=self.root)
         gen = aug2cmds.outputs.Augtool().visit(pn, "database[15]")
         self.assertEqual(next(gen),
           "set /files/etc/nsswitch.conf/database[.='aliases'] 'aliases'")
@@ -66,6 +61,19 @@ class TestNode(unittest.TestCase):
           "set /files/etc/nsswitch.conf/database[.='aliases']/service[.='files'] 'files'")
         self.assertEqual(next(gen),
           "set /files/etc/nsswitch.conf/database[.='aliases']/service[.='nisplus'] 'nisplus'")
+        self.assertRaises(StopIteration, next, gen)
+
+    def test_cmd_clear(self):
+        """Check 'clear' is generated when there's no value"""
+        class EmptyNode:
+            def setpath(self):
+                return "/files/foo"
+            def value(self):
+                return None
+            def children(self):
+                return []
+        gen = aug2cmds.outputs.Augtool().visitnode(EmptyNode())
+        self.assertEqual(next(gen), "clear /files/foo")
         self.assertRaises(StopIteration, next, gen)
 
 if __name__ == '__main__':
