@@ -66,13 +66,13 @@ class TestNode(unittest.TestCase):
     def test_children_none(self):
         """Test when there are no children"""
         n = aug2cmds.Node(self.aug, self.parent,
-                          "/files/etc/nsswitch.conf/#comment[1]")
+                          "/files/etc/nsswitch.conf/#comment[1]", ["."])
         self.assertRaises(StopIteration, next, n.children())
 
     def test_children(self):
         """Test new Node objects are created for children"""
         n = aug2cmds.Node(self.aug, self.parent,
-                          "/files/etc/nsswitch.conf/database[15]")
+                          "/files/etc/nsswitch.conf/database[15]", ["."])
         c = n.children()
         sn = c.next()
         self.assertEqual(sn.path,
@@ -87,6 +87,19 @@ class TestNode(unittest.TestCase):
           "/files/etc/nsswitch.conf/database[.='aliases']/service[.='nisplus']")
 
         self.assertRaises(StopIteration, next, c)
+
+    def test_value(self):
+        """Test value is retrieved"""
+        n = aug2cmds.Node(self.aug, self.parent, uniqpaths=["."],
+                          path="/files/etc/nsswitch.conf/database[1]")
+        self.assertEqual(n.value(), "passwd")
+
+    def test_value_none(self):
+        """Test when no value is set"""
+        n = aug2cmds.Node(self.aug, self.parent, uniqpaths=["."],
+                          path="/files/etc/nsswitch.conf")
+        self.assertEqual(n.value(), None)
+
 
 if __name__ == '__main__':
     unittest.main()

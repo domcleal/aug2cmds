@@ -12,10 +12,11 @@ class Node:
 
     :param uniqpaths: list of paths relative to this node that make it
     unique, e.g. ["."], ["ipaddr", "canonical"]"""
-    def __init__(self, aug, parent, path, uniqpaths=["."]):
+    def __init__(self, aug, parent, path, uniqpaths):
         self.aug = aug
         self.parent = parent
         self.path = path
+        # FIXME: interactive way to set uniqpaths needed
         self.uniqpaths = uniqpaths
 
     @classmethod
@@ -33,25 +34,25 @@ class Node:
         """Understands that slashes can be contained in brackets""" 
         sbracket = 0
         # Count backwards to find last slash outside brackets
-        for c in range(len(path))[::-1]:
-            if path[c] == ']':
+        for char in range(len(path))[::-1]:
+            if path[char] == ']':
                 sbracket -= 1
-            elif path[c] == '[':
+            elif path[char] == '[':
                 sbracket += 1
-            elif path[c] == '/' and sbracket == 0:
+            elif path[char] == '/' and sbracket == 0:
                 if base:
                     # strip off path expressions
-                    end = path.find("[", c+1)
+                    end = path.find("[", char+1)
                     if end > 0:
-                        return path[c+1:end]
+                        return path[char+1:end]
                     else:
-                        return path[c+1:]
+                        return path[char+1:]
                 else:
-                    if c == 0:
+                    if char == 0:
                         # special case: root
                         return path[0]
                     else:
-                        return path[:c]
+                        return path[:char]
 
     def setpath(self):
         """Generate a path for use in `set` commands to represent this node.
@@ -69,9 +70,14 @@ class Node:
                                          (self.path, subpath)))
                            for subpath in self.uniqpaths]))
 
+    def value(self):
+        """Get node value"""
+        return self.aug.get(self.path)
+
     def children(self):
+        """Get `Node` objects for each child node (generator)"""
         for cpath in self.aug.match("%s/*" % self.path):
-            yield Node(self.aug, self, cpath)
+            yield Node(self.aug, self, cpath, ["."])
 
 class PathNode(Node):
     """Top level Augeas node representing the file itself."""
@@ -96,7 +102,7 @@ class PathNode(Node):
             flags = Augeas.NO_MODL_AUTOLOAD
 
         aug = Augeas(root=root, flags=flags)
-        Node.__init__(self, aug, None, "/files%s" % path)
+        Node.__init__(self, aug, None, "/files%s" % path, ["."])
 
         if lens:
             self.aug.add_transform(lens, path)
@@ -114,8 +120,8 @@ class PathNode(Node):
     def setpath(self):
         return self.path
 
-    def children(self, augpath):
-        yield self.topnode(augpath)
+    def children(self):
+        raise NotImplementedError()
 
     def topnode(self, augpath=None):
         """Gets the top `Node` from augpath relative to this file."""
