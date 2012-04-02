@@ -143,4 +143,4 @@ class PathNode(Node):
         if toppath == self.path:
             return self
 
-        return Node(self.aug, self, toppath, [augpath])
+        return Node(self.aug, self, toppath, ["."])
