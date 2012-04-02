@@ -18,3 +18,8 @@
   * aug_srun/augtool
   * Puppet
   * API calls
+* Automatic testing
+  * copy original file
+  * remove section based on the top node path expression
+  * run commands against file
+  * compare to original
